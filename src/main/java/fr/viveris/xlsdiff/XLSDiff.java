@@ -4,6 +4,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
+import java.util.List;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -17,6 +19,14 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 @Slf4j
 public class XLSDiff {
+    private final XSSFWorkbook        outWk       = null;
+    private static final List<String> COORDINATES = Arrays.asList("A", "B",
+                                                          "C", "D", "E", "F",
+                                                          "G", "H", "I", "J",
+                                                          "K", "L", "M", "N",
+                                                          "O", "P", "Q", "R",
+                                                          "S", "T", "U", "V",
+                                                          "W", "X", "Y", "Z");
 
     public static void main(final String[] args) {
         final XLSDiff xlsDiff = new XLSDiff();
@@ -33,6 +43,11 @@ public class XLSDiff {
     public boolean performDiff(final String fileName1, final String fileName2)
             throws FileNotFoundException, IOException {
         boolean isOK = true;
+        // try (final XSSFWorkbook outWk = new XSSFWorkbook(
+        // System.getProperty("user.dir")
+        // + System.getProperty("file.separator")
+        // + "outputDiff.xlsx")) {
+        // this.outWk = outWk;
         if (fileName1.endsWith(".xls")) {
             try (final InputStream stream1 = new FileInputStream(fileName1)) {
                 try (final InputStream stream2 = new FileInputStream(fileName2)) {
@@ -95,6 +110,7 @@ public class XLSDiff {
                     }
                 }
             }
+            // }
         }
         return isOK;
     }
@@ -117,7 +133,7 @@ public class XLSDiff {
             for (final Cell cell2 : row2) {
                 final int cellNum = cell2.getColumnIndex();
                 final Cell cell1 = row1.getCell(cellNum);
-                isOK &= compareCell(cell1, cell2);
+                isOK &= compareCell(cell2, cell1);
             }
         }
         return isOK;
@@ -128,10 +144,8 @@ public class XLSDiff {
         final String cell1Content = getStringCellValue(cell1);
         final String cell2Content = getStringCellValue(cell2);
         if (!StringUtils.equals(cell1Content, cell2Content)) {
-            log.error(
-                    "Cell Column {}, Line {} differs : cell1 value == {}, cell2 value == {}",
-                    cell1.getColumnIndex(), cell1.getRowIndex(), cell1Content,
-                    cell2Content);
+            log.error("Cell {} differs : cell1 value == {}, cell2 value == {}",
+                    getCellCoordinates(cell1), cell1Content, cell2Content);
             isOK = false;
         }
         return isOK;
@@ -176,5 +190,21 @@ public class XLSDiff {
         default:
             return cell.getStringCellValue();
         }
+    }
+
+    private static String getCellCoordinates(final Cell cell) {
+        final int columnIndex = cell.getColumnIndex();
+        final String columnLetter;
+        if (columnIndex > COORDINATES.size()) {
+            final String firstLetter = COORDINATES.get(columnIndex
+                    / COORDINATES.size() - 1);
+            final String secondLetter = COORDINATES.get(columnIndex
+                    % COORDINATES.size() - 1);
+            columnLetter = firstLetter + secondLetter;
+        } else {
+            columnLetter = COORDINATES.get(columnIndex - 1);
+        }
+        final int rowIndex = cell.getRowIndex();
+        return columnLetter + "-" + rowIndex;
     }
 }
