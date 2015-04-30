@@ -5,7 +5,6 @@ import java.awt.Cursor;
 import java.awt.Dialog;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
-import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.beans.PropertyChangeEvent;
@@ -55,14 +54,15 @@ public class GridViewDialog extends JDialog {
 	private final JScrollPane sheetListPane = new JScrollPane();
 	private final JScrollPane rightScrollPane = new JScrollPane();
 	private final DefaultListModel<String> listModel = new DefaultListModel<>();
-	private final JList<String> list = new JList<>(this.listModel);
+	// private final JList<String> sheetList = new JList<>(this.listModel);
 	private final JTable table;
 
 	private Workbook wk1;
-
 	private Workbook wk2;
-	private final JSplitPane splitPane_1 = new JSplitPane();
+
+	private final JSplitPane dataDisplaySplitPane = new JSplitPane();
 	private final JScrollPane scrollPane = new JScrollPane();
+	private final JList<String> sheetList = new JList<>(this.listModel);
 
 	public GridViewDialog(final Boolean editable, final String[] args) {
 		setModalityType(Dialog.DEFAULT_MODALITY_TYPE);
@@ -132,12 +132,7 @@ public class GridViewDialog extends JDialog {
 		gblPanel.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
 		gblPanel.rowWeights = new double[] { 0.0, 0.0, Double.MIN_VALUE };
 		this.panel.setLayout(gblPanel);
-		final GridBagConstraints gbc_list = new GridBagConstraints();
-		gbc_list.insets = new Insets(0, 0, 5, 0);
-		gbc_list.gridx = 0;
-		gbc_list.gridy = 0;
-		this.panel.add(this.list, gbc_list);
-		this.list.addListSelectionListener(new ListSelectionListener() {
+		this.sheetList.addListSelectionListener(new ListSelectionListener() {
 			@Override
 			public void valueChanged(final ListSelectionEvent e) {
 				GridViewDialog.this.load();
@@ -159,13 +154,15 @@ public class GridViewDialog extends JDialog {
 		getContentPane().add(this.splitPane, BorderLayout.CENTER);
 
 		this.splitPane.setLeftComponent(this.sheetListPane);
-		this.splitPane_1.setOrientation(JSplitPane.VERTICAL_SPLIT);
 
-		this.splitPane.setRightComponent(this.splitPane_1);
-		this.splitPane_1.setLeftComponent(this.rightScrollPane);
+		this.sheetListPane.setViewportView(this.sheetList);
+		this.dataDisplaySplitPane.setOrientation(JSplitPane.VERTICAL_SPLIT);
+
+		this.splitPane.setRightComponent(this.dataDisplaySplitPane);
+		this.dataDisplaySplitPane.setLeftComponent(this.rightScrollPane);
 		this.rightScrollPane.setViewportView(this.table);
 
-		this.splitPane_1.setRightComponent(this.scrollPane);
+		this.dataDisplaySplitPane.setRightComponent(this.scrollPane);
 
 		this.table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 		this.table.addPropertyChangeListener(new PropertyChangeListener() {
@@ -275,7 +272,8 @@ public class GridViewDialog extends JDialog {
 	}
 
 	private void load() {
-		final String sheetName = this.list.getSelectedValue().split(" \\(")[0];
+		final String sheetName = this.sheetList.getSelectedValue()
+				.split(" \\(")[0];
 		if (sheetName == null) {
 			return;
 		}
@@ -363,7 +361,8 @@ public class GridViewDialog extends JDialog {
 		final int columnNumber = GridViewDialog.this.table.getEditingColumn();
 
 		final TableModel model = GridViewDialog.this.table.getModel();
-		final String tableName = GridViewDialog.this.list.getSelectedValue();
+		final String tableName = GridViewDialog.this.sheetList
+				.getSelectedValue();
 		final String columnName = model.getColumnName(columnNumber);
 		final String lineNumberName = model.getColumnName(0);
 		final Object lineNumberValue = model.getValueAt(lineNumber, 0);
