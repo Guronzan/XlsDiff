@@ -2,7 +2,6 @@ package fr.viveris.xlsdiff.gui;
 
 import java.awt.BorderLayout;
 import java.awt.Cursor;
-import java.awt.Dialog;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.event.ActionEvent;
@@ -22,7 +21,7 @@ import java.util.Map;
 
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
-import javax.swing.JDialog;
+import javax.swing.JFrame;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -44,71 +43,80 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 @Slf4j
-public class GridViewDialog extends JDialog {
+public class GridViewDialog extends JFrame {
 	private static final long serialVersionUID = 1L;
 
-	private final Map<String, TableModel> modelMap = new HashMap<>();
+	private final Map<String, TableModel> oldModelMap = new HashMap<>();
+	private final Map<String, TableModel> newModelMap = new HashMap<>();
 	private final JPanel panel = new JPanel();
 	private final JButton close = new JButton("Fermer");
 	private final JSplitPane splitPane = new JSplitPane();
 	private final JScrollPane sheetListPane = new JScrollPane();
 	private final JScrollPane rightScrollPane = new JScrollPane();
-	private final DefaultListModel<String> listModel = new DefaultListModel<>();
-	// private final JList<String> sheetList = new JList<>(this.listModel);
-	private final JTable table;
+	private final DefaultListModel<String> sheetListModel = new DefaultListModel<>();
+	private final JTable oldTable;
+	private final JTable newTable;
 
-	private Workbook wk1;
-	private Workbook wk2;
+	private Workbook oldWorkBook;
+	private Workbook newWorkBook;
 
 	private final JSplitPane dataDisplaySplitPane = new JSplitPane();
 	private final JScrollPane scrollPane = new JScrollPane();
-	private final JList<String> sheetList = new JList<>(this.listModel);
+	private final JList<String> sheetList = new JList<>(this.sheetListModel);
 
 	public GridViewDialog(final Boolean editable, final String[] args) {
-		setModalityType(Dialog.DEFAULT_MODALITY_TYPE);
-		this.setBounds(100, 100, 800, 600);
+		this.setBounds(100, 100, 1400, 1000);
 		GUIUtils.centerOnScreen(this);
 
-		if (editable) {
-			this.table = new JTable() {
-				private static final long serialVersionUID = 1L;
+		// if (editable) {
+		// this.newTable = new JTable() {
+		// private static final long serialVersionUID = 1L;
+		//
+		// @Override
+		// public boolean isCellEditable(final int row, final int column) {
+		// // final String virtualName = CONFIG.getTableFromRealName(
+		// // GridViewDialog.this.list.getSelectedValue())
+		// // .getVirtualName();
+		// // if (CHECKOUT_SERVICE.isCheckedOut(virtualName)) {
+		// // return false;
+		// // }
+		// if (column == 0
+		// || column == this.columnModel.getColumnCount() - 1) {
+		// return false;
+		// }
+		// return true;
+		// }
+		// };
+		// } else {
+		this.oldTable = new JTable() {
+			private static final long serialVersionUID = 1L;
 
-				@Override
-				public boolean isCellEditable(final int row, final int column) {
-					// final String virtualName = CONFIG.getTableFromRealName(
-					// GridViewDialog.this.list.getSelectedValue())
-					// .getVirtualName();
-					// if (CHECKOUT_SERVICE.isCheckedOut(virtualName)) {
-					// return false;
-					// }
-					if (column == 0
-							|| column == this.columnModel.getColumnCount() - 1) {
-						return false;
-					}
-					return true;
-				}
-			};
-		} else {
-			this.table = new JTable() {
-				private static final long serialVersionUID = 1L;
+			@Override
+			public boolean isCellEditable(final int row, final int column) {
+				return false;
+			}
+		};
+		this.newTable = new JTable() {
+			private static final long serialVersionUID = 1L;
 
-				@Override
-				public boolean isCellEditable(final int row, final int column) {
-					return false;
-				}
-			};
-		}
+			@Override
+			public boolean isCellEditable(final int row, final int column) {
+				return false;
+			}
+		};
+		// }
 
 		try {
-			this.wk1 = openFile(args[0]);
-			this.wk2 = openFile(args[1]);
+			this.oldWorkBook = openFile(args[0]);
+			this.newWorkBook = openFile(args[1]);
 		} catch (final IOException e) {
 			log.error("Error while opening Workbook", e);
 		}
 
 		final List<Sheet> sheetList = new LinkedList<>();
-		for (int sheetIndex = 0; sheetIndex < this.wk1.getNumberOfSheets(); ++sheetIndex) {
-			sheetList.add(this.wk1.getSheetAt(sheetIndex));
+		for (int sheetIndex = 0; sheetIndex < this.newWorkBook
+				.getNumberOfSheets(); ++sheetIndex) {
+			sheetList.add(this.newWorkBook.getSheetAt(sheetIndex));
 		}
 
 		Collections.sort(sheetList, new Comparator<Sheet>() {
@@ -119,8 +127,7 @@ public class GridViewDialog extends JDialog {
 		});
 
 		for (final Sheet sheet : sheetList) {
-			// this.listModel.addElement(computeSheetSize(sheet));
-			this.listModel.addElement(sheet.getSheetName());
+			this.sheetListModel.addElement(sheet.getSheetName());
 		}
 
 		getContentPane().setLayout(new BorderLayout(0, 0));
@@ -160,16 +167,30 @@ public class GridViewDialog extends JDialog {
 
 		this.splitPane.setRightComponent(this.dataDisplaySplitPane);
 		this.dataDisplaySplitPane.setLeftComponent(this.rightScrollPane);
-		this.rightScrollPane.setViewportView(this.table);
+		this.rightScrollPane.setViewportView(this.oldTable);
 
 		this.dataDisplaySplitPane.setRightComponent(this.scrollPane);
 
-		this.table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-		this.table.addPropertyChangeListener(new PropertyChangeListener() {
+		this.scrollPane.setViewportView(this.newTable);
+
+		this.oldTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+		this.oldTable.addPropertyChangeListener(new PropertyChangeListener() {
 			@Override
 			public void propertyChange(final PropertyChangeEvent evt) {
 				if (!"tableCellEditor".equals(evt.getPropertyName())
-						|| GridViewDialog.this.table.isEditing()) {
+						|| GridViewDialog.this.oldTable.isEditing()) {
+					return;
+				}
+
+				GridViewDialog.this.updateGridView();
+			}
+		});
+		this.newTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+		this.newTable.addPropertyChangeListener(new PropertyChangeListener() {
+			@Override
+			public void propertyChange(final PropertyChangeEvent evt) {
+				if (!"tableCellEditor".equals(evt.getPropertyName())
+						|| GridViewDialog.this.oldTable.isEditing()) {
 					return;
 				}
 
@@ -280,13 +301,47 @@ public class GridViewDialog extends JDialog {
 
 		setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
 
-		if (this.modelMap.containsKey(sheetName)) {
-			this.table.setModel(this.modelMap.get(sheetName));
+		if (this.oldModelMap.containsKey(sheetName)) {
+			this.oldTable.setModel(this.oldModelMap.get(sheetName));
 		} else {
-			final DefaultTableModel model = new DefaultTableModel();
-			final Sheet sheet = this.wk1.getSheet(sheetName);
+			final DefaultTableModel oldModel = new DefaultTableModel();
+			final Sheet oldSheet = this.oldWorkBook.getSheet(sheetName);
 			final List<List<Object>> dataList = new LinkedList<>();
-			for (final Row row : sheet) {
+			if (oldSheet != null) {
+				for (final Row row : oldSheet) {
+					if (row.getRowNum() == 0) {
+						// Skip header
+						continue;
+					}
+					final List<Object> rowData = new LinkedList<Object>();
+					for (final Cell cell : row) {
+						rowData.add(getStringCellValue(cell));
+					}
+
+					dataList.add(rowData);
+				}
+
+				final Row firstRow = oldSheet.getRow(0);
+				for (final Cell cell : firstRow) {
+					oldModel.addColumn(getStringCellValue(cell));
+				}
+				for (final List<Object> rowDataList : dataList) {
+					oldModel.addRow(rowDataList.toArray());
+				}
+				this.oldTable.setModel(oldModel);
+				this.oldModelMap.put(sheetName, oldModel);
+			} else {
+				this.oldTable.setModel(new DefaultTableModel());
+			}
+		}
+
+		if (this.newModelMap.containsKey(sheetName)) {
+			this.newTable.setModel(this.newModelMap.get(sheetName));
+		} else {
+			final DefaultTableModel newModel = new DefaultTableModel();
+			final Sheet newSheet = this.newWorkBook.getSheet(sheetName);
+			final List<List<Object>> dataList = new LinkedList<>();
+			for (final Row row : newSheet) {
 				if (row.getRowNum() == 0) {
 					// Skip header
 					continue;
@@ -299,68 +354,26 @@ public class GridViewDialog extends JDialog {
 				dataList.add(rowData);
 			}
 
-			final Row firstRow = sheet.getRow(0);
+			final Row firstRow = newSheet.getRow(0);
 			for (final Cell cell : firstRow) {
-				model.addColumn(getStringCellValue(cell));
+				newModel.addColumn(getStringCellValue(cell));
 			}
-
-			// final SheetData sheet = DAO.select(tableName);
-			//
-			// for (final Column<?, ?, ?> column : sheet.getTable()) {
-			// if (!column.getRealName().equals(
-			// com.alstom.designStudio.sydt.db.DAO.LINE_NUMBER)) {
-			// model.addColumn(column.getRealName());
-			// }
-			// }
-			//
-			// final List<List<Object>> dataList = new LinkedList<>();
-			// for (final RowData row : sheet) {
-			// final List<Object> rowDataList = new LinkedList<>();
-			// for (final Column<?, ?, ?> column : sheet.getTable()) {
-			// if (!column.getRealName().equals(
-			// com.alstom.designStudio.sydt.db.DAO.LINE_NUMBER)) {
-			// if (column.getType().getEnumType() == ColumnTypeEnum.dateType) {
-			// final DateContent content = (DateContent) row.get(
-			// column).getContent();
-			// if (content.getValue() != null) {
-			// final DateTime date = new DateTime(
-			// DateUtil.getJavaDate(content.getValue()));
-			// rowDataList.add(date
-			// .toString("yyyy/MM/dd HH:mm:ss"));
-			// } else {
-			// rowDataList.add("");
-			// }
-			// } else {
-			// rowDataList.add(row.get(column).getContent()
-			// .getValue());
-			// }
-			// }
-			// }
-			// dataList.add(rowDataList);
-			// }
-			//
-			// Collections.sort(dataList, RowComparator.INSTANCE);
-			// for (final List<Object> rowDataList : dataList) {
-			// model.addRow(rowDataList.toArray());
-			// }
-			//
 			for (final List<Object> rowDataList : dataList) {
-				model.addRow(rowDataList.toArray());
+				newModel.addRow(rowDataList.toArray());
 			}
-			// model.addRow(dataList.get(0).toArray());
-			// model.addRow(dataList.get(1).toArray());
-			this.table.setModel(model);
-			this.modelMap.put(sheetName, model);
+			this.newTable.setModel(newModel);
+			this.newModelMap.put(sheetName, newModel);
 		}
 		setCursor(Cursor.getDefaultCursor());
 
 	}
 
 	private void updateGridView() {
-		final int lineNumber = GridViewDialog.this.table.getEditingRow();
-		final int columnNumber = GridViewDialog.this.table.getEditingColumn();
+		final int lineNumber = GridViewDialog.this.oldTable.getEditingRow();
+		final int columnNumber = GridViewDialog.this.oldTable
+				.getEditingColumn();
 
-		final TableModel model = GridViewDialog.this.table.getModel();
+		final TableModel model = GridViewDialog.this.oldTable.getModel();
 		final String tableName = GridViewDialog.this.sheetList
 				.getSelectedValue();
 		final String columnName = model.getColumnName(columnNumber);
