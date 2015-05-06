@@ -34,7 +34,7 @@ public class XLSDiff {
 					log.error("Files are not equals");
 				}
 			} catch (final IOException e) {
-				log.error("Main Error", e);
+				log.error("MainWindow Error", e);
 			}
 		}
 	}
