@@ -1,20 +1,17 @@
 package fr.viveris.xlsdiff.fxgui.controler;
 
 import java.io.IOException;
-import java.net.URL;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.ResourceBundle;
 import java.util.TreeMap;
 
 import javafx.application.Application.Parameters;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
-import javafx.fxml.Initializable;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
@@ -34,13 +31,30 @@ import fr.viveris.xlsdiff.fxgui.MainWindow;
 import fr.viveris.xlsdiff.utils.XlsUtils;
 
 @Slf4j
-public class SheetListControler implements Initializable {
-    private Workbook                       oldWorkBook;
-    private Workbook                       newWorkBook;
-    private final Map<Integer, String>     columnMapKeys = new TreeMap<>();
+public class SheetListControler {
+    private Workbook oldWorkBook;
+    private Workbook newWorkBook;
+    private final Map<String, ObservableList<Map<String, String>>> oldWkData = new TreeMap<>();
+    private final Map<String, ObservableList<Map<String, String>>> newWkData = new TreeMap<>();
+    final Callback<TableColumn<Map<String, String>, String>, TableCell<Map<String, String>, String>> cellFactoryForMap = p -> new TextFieldTableCell<>(
+            new StringConverter<String>() {
+                @Override
+                public String toString(final String t) {
+                    if (t != null) {
+                        return t.toString();
+                    } else {
+                        return null;
+                    }
+                }
+
+                @Override
+                public String fromString(final String string) {
+                    return string;
+                }
+            });
 
     @FXML
-    private ListView<String>               sheetList;
+    private ListView<String> sheetList;
 
     @FXML
     private TableView<Map<String, String>> oldTableView;
@@ -50,8 +64,7 @@ public class SheetListControler implements Initializable {
     public SheetListControler() {
     }
 
-    @Override
-    public void initialize(final URL location, final ResourceBundle resources) {
+    public void initialize() {
         assert this.sheetList != null : "fx:id=\"sheetList\" was not injected: check your FXML file 'mainFrame.fxml'.";
 
         this.sheetList.setOnMouseClicked(event -> load());
@@ -107,71 +120,49 @@ public class SheetListControler implements Initializable {
         final Sheet newSheet = this.newWorkBook.getSheet(sheetName);
 
         if (oldSheet != null) {
-            final Row firstRow = oldSheet.getRow(0);
-            final Callback<TableColumn<Map<String, String>, String>, TableCell<Map<String, String>, String>> cellFactoryForMap = p -> new TextFieldTableCell<>(
-                    new StringConverter() {
-                        @Override
-                        public String toString(final Object t) {
-                            if (t != null) {
-                                return t.toString();
-                            } else {
-                                return null;
-                            }
-                        }
+            final Map<Integer, String> columnMapKeys = new TreeMap<>();
 
-                        @Override
-                        public Object fromString(final String string) {
-                            return string;
-                        }
-                    });
+            final Row firstRow = oldSheet.getRow(0);
             for (final Cell cell : firstRow) {
 
                 final String cellValue = XlsUtils.getStringCellValue(cell);
                 final TableColumn<Map<String, String>, String> tableColumn = new TableColumn<>(
                         cellValue);
                 tableColumn.setCellValueFactory(new MapValueFactory(cellValue));
-                tableColumn.setCellFactory(cellFactoryForMap);
+                tableColumn.setCellFactory(this.cellFactoryForMap);
                 this.oldTableView.getColumns().add(tableColumn);
-                this.columnMapKeys.put(cell.getColumnIndex(), cellValue);
+                columnMapKeys.put(cell.getColumnIndex(), cellValue);
             }
 
-            final ObservableList<Map<String, String>> data = FXCollections
-                    .observableArrayList();
-            for (final Row sheetRow : oldSheet) {
-                if (sheetRow.getRowNum() == 0) {
-                    // Skip header
-                    continue;
-                }
-                final Map<String, String> dataRow = new HashMap<>();
-                for (int i = 0; i < sheetRow.getLastCellNum(); ++i) {
+            if (this.oldWkData.containsKey(oldSheet.getSheetName())) {
+                this.oldTableView.setItems(this.oldWkData.get(oldSheet
+                        .getSheetName()));
+            } else {
 
-                    final Cell cell = sheetRow.getCell(i);
-                    dataRow.put(this.columnMapKeys.get(i),
-                            XlsUtils.getStringCellValue(cell));
+                final ObservableList<Map<String, String>> data = FXCollections
+                        .observableArrayList();
+                for (final Row sheetRow : oldSheet) {
+                    if (sheetRow.getRowNum() == 0) {
+                        // Skip header
+                        continue;
+                    }
+                    final Map<String, String> dataRow = new HashMap<>();
+                    for (int i = 0; i < sheetRow.getLastCellNum(); ++i) {
+
+                        final Cell cell = sheetRow.getCell(i);
+                        dataRow.put(columnMapKeys.get(i),
+                                XlsUtils.getStringCellValue(cell));
+                    }
+                    data.add(dataRow);
                 }
-                data.add(dataRow);
+                this.oldTableView.setItems(data);
+                this.oldWkData.put(sheetName, data);
             }
-            this.oldTableView.setItems(data);
         }
 
         if (newSheet != null) {
+            final Map<Integer, String> columnMapKeys = new TreeMap<>();
             final Row firstRow = newSheet.getRow(0);
-            final Callback<TableColumn<Map<String, String>, String>, TableCell<Map<String, String>, String>> cellFactoryForMap = p -> new TextFieldTableCell<>(
-                    new StringConverter() {
-                        @Override
-                        public String toString(final Object t) {
-                            if (t != null) {
-                                return t.toString();
-                            } else {
-                                return null;
-                            }
-                        }
-
-                        @Override
-                        public Object fromString(final String string) {
-                            return string;
-                        }
-                    });
 
             for (final Cell cell : firstRow) {
 
@@ -179,27 +170,33 @@ public class SheetListControler implements Initializable {
                 final TableColumn<Map<String, String>, String> tableColumn = new TableColumn<>(
                         cellValue);
                 tableColumn.setCellValueFactory(new MapValueFactory(cellValue));
-                tableColumn.setCellFactory(cellFactoryForMap);
+                tableColumn.setCellFactory(this.cellFactoryForMap);
                 this.newTableView.getColumns().add(tableColumn);
-                this.columnMapKeys.put(cell.getColumnIndex(), cellValue);
+                columnMapKeys.put(cell.getColumnIndex(), cellValue);
             }
 
-            final ObservableList<Map<String, String>> data = FXCollections
-                    .observableArrayList();
-            for (final Row sheetRow : newSheet) {
-                if (sheetRow.getRowNum() == 0) {
-                    // Skip header
-                    continue;
+            if (this.newWkData.containsKey(newSheet.getSheetName())) {
+                this.newTableView.setItems(this.newWkData.get(newSheet
+                        .getSheetName()));
+            } else {
+                final ObservableList<Map<String, String>> data = FXCollections
+                        .observableArrayList();
+                for (final Row sheetRow : newSheet) {
+                    if (sheetRow.getRowNum() == 0) {
+                        // Skip header
+                        continue;
+                    }
+                    final Map<String, String> dataRow = new HashMap<>();
+                    for (int i = 0; i < sheetRow.getLastCellNum(); ++i) {
+                        final Cell cell = sheetRow.getCell(i);
+                        dataRow.put(columnMapKeys.get(i),
+                                XlsUtils.getStringCellValue(cell));
+                    }
+                    data.add(dataRow);
                 }
-                final Map<String, String> dataRow = new HashMap<>();
-                for (int i = 0; i < sheetRow.getLastCellNum(); ++i) {
-                    final Cell cell = sheetRow.getCell(i);
-                    dataRow.put(this.columnMapKeys.get(i),
-                            XlsUtils.getStringCellValue(cell));
-                }
-                data.add(dataRow);
+                this.newTableView.setItems(data);
+                this.newWkData.put(sheetName, data);
             }
-            this.newTableView.setItems(data);
         }
     }
 }
