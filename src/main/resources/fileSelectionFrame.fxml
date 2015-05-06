@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.paint.*?>
+<?import javafx.scene.text.*?>
+
+<VBox prefHeight="224.0" prefWidth="558.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+  <children>
+    <AnchorPane maxHeight="-1.0" maxWidth="-1.0" prefHeight="203.0" prefWidth="605.0" VBox.vgrow="ALWAYS">
+      <children>
+            <Button id="buttonFile1" layoutX="123.0" layoutY="45.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="91.0" text="Browse" />
+            <Label layoutX="43.0" layoutY="49.0" prefHeight="17.0" prefWidth="67.0" text="Select File 1" />
+            <TextField id="fieldFile1" layoutX="246.0" layoutY="45.0" prefHeight="25.0" prefWidth="255.0" />
+            <TextField id="fieldFile2" layoutX="246.0" layoutY="117.0" prefHeight="25.0" prefWidth="255.0" />
+            <Button id="buttonFile2" layoutX="123.0" layoutY="117.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="91.0" text="Button" />
+            <Label layoutX="40.0" layoutY="121.0" prefHeight="17.0" prefWidth="74.0" text="Select File 2" />
+            <Button id="buttonRunCompare" layoutX="149.0" layoutY="171.0" mnemonicParsing="false" text="Compare files" />
+            <Button id="buttonCancel" layoutX="341.0" layoutY="171.0" mnemonicParsing="false" text="Cancel" />
+      </children>
+    </AnchorPane>
+  </children>
+</VBox>
