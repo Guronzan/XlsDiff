@@ -13,20 +13,10 @@
     <MenuBar VBox.vgrow="NEVER">
       <menus>
         <Menu mnemonicParsing="false" text="File">
-          <items>
-            <MenuItem mnemonicParsing="false" text="New" />
-            <MenuItem mnemonicParsing="false" text="Open…" />
-            <Menu mnemonicParsing="false" text="Open Recent" />
-            <SeparatorMenuItem mnemonicParsing="false" />
-            <MenuItem mnemonicParsing="false" text="Close" />
-            <MenuItem mnemonicParsing="false" text="Save" />
-            <MenuItem mnemonicParsing="false" text="Save As..." />
-            <MenuItem mnemonicParsing="false" text="Revert" />
-            <SeparatorMenuItem mnemonicParsing="false" />
-            <MenuItem mnemonicParsing="false" text="Preferences..." />
-            <SeparatorMenuItem mnemonicParsing="false" />
-            <MenuItem mnemonicParsing="false" text="Quit" />
-          </items>
+               <items>
+                  <MenuItem fx:id="menuChooseFiles" mnemonicParsing="false" text="Choose new Files" />
+                  <MenuItem fx:id="menuSearchDiff" mnemonicParsing="false" text="Search Diffs" />
+               </items>
         </Menu>
         <Menu mnemonicParsing="false" text="Edit">
           <items>
@@ -58,8 +48,8 @@
             </ScrollPane>
             <SplitPane dividerPositions="0.5" orientation="VERTICAL" prefHeight="200.0" prefWidth="160.0">
               <items>
-                  <TableView fx:id="oldTableView" prefHeight="269.0" prefWidth="446.0"/>
-                  <TableView fx:id="newTableView" prefHeight="271.0" prefWidth="432.0"/>
+                  <TableView fx:id="oldTableView" prefHeight="269.0" prefWidth="446.0" />
+                  <TableView fx:id="newTableView" prefHeight="271.0" prefWidth="432.0" />
               </items>
             </SplitPane>
       </items>

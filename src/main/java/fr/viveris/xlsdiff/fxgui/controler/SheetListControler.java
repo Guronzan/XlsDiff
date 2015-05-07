@@ -8,11 +8,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import javafx.application.Application.Parameters;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.ListView;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -53,6 +53,8 @@ public class SheetListControler {
                 }
             });
 
+    private final MainWindow mainInstance = MainWindow.getInstance();
+
     @FXML
     private ListView<String> sheetList;
 
@@ -61,50 +63,77 @@ public class SheetListControler {
     @FXML
     private TableView<Map<String, String>> newTableView;
 
-    public SheetListControler() {
-    }
+    @FXML
+    private MenuItem menuChooseFiles;
+    @FXML
+    private MenuItem menuSearchDiff;
 
     public void initialize() {
         assert this.sheetList != null : "fx:id=\"sheetList\" was not injected: check your FXML file 'mainFrame.fxml'.";
-
         this.sheetList.setOnMouseClicked(event -> load());
+        this.menuChooseFiles.setOnAction(event -> {
+            this.mainInstance.getPrimaryStage().hide();
+            this.mainInstance.getFileSelectionStage().showAndWait();
+        });
 
-        final Parameters parameters = MainWindow.getInstance().getParameters();
-        final Map<String, String> namedParameters = parameters.getNamed();
-        final String oldFileName = namedParameters.get("oldFile");
-        final String newFileName = namedParameters.get("newFile");
+        this.menuSearchDiff.setOnAction(event -> {
+            performDiffs();
+        });
 
-        try {
-            this.oldWorkBook = XlsUtils.openFile(oldFileName);
-            this.newWorkBook = XlsUtils.openFile(newFileName);
-        } catch (final IOException e) {
-            log.error("Error while opening Workbook", e);
-            return;
+        // final ObservableList<Integer> highlightRows = FXCollections
+        // .observableArrayList();
+        //
+        // this.oldTableView
+        // .setRowFactory(tableView -> {
+        // final TableRow<Map<String, String>> row = new TableRow<Map<String,
+        // String>>() {
+        // @Override
+        // protected void updateItem(
+        // final Map<String, String> map,
+        // final boolean empty) {
+        // super.updateItem(map, empty);
+        // if (highlightRows.contains(getIndex())) {
+        // if (!getStyleClass().contains("highlightedRow")) {
+        // getStyleClass().add("highlightedRow");
+        // }
+        // } else {
+        // getStyleClass()
+        // .removeAll(
+        // Collections
+        // .singleton("highlightedRow"));
+        // }
+        // }
+        // };
+        // highlightRows
+        // .addListener((ListChangeListener<Integer>) change -> {
+        // if (highlightRows.contains(row.getIndex())) {
+        // if (!row.getStyleClass().contains(
+        // "highlightedRow")) {
+        // row.getStyleClass().add(
+        // "highlightedRow");
+        // }
+        // } else {
+        // row.getStyleClass()
+        // .removeAll(
+        // Collections
+        // .singleton("highlightedRow"));
+        // }
+        // });
+        // return row;
+        // });
+    }
+
+    private void performDiffs() {
+        final ObservableList<Map<String, String>> oldItems = this.oldTableView
+                .getItems();
+        final ObservableList<Map<String, String>> newitems = this.newTableView
+                .getItems();
+
+        for (int i = 0; i < oldItems.size(); ++i) {
+            final Map<String, String> oldMap = oldItems.get(i);
+            final Map<String, String> newMap = newitems.get(i);
+
         }
-
-        final List<String> sheetList = new LinkedList<>();
-        for (int sheetIndex = 0; sheetIndex < this.newWorkBook
-                .getNumberOfSheets(); ++sheetIndex) {
-            sheetList.add(this.newWorkBook.getSheetAt(sheetIndex)
-                    .getSheetName());
-        }
-
-        for (int sheetIndex = 0; sheetIndex < this.oldWorkBook
-                .getNumberOfSheets(); ++sheetIndex) {
-            final Sheet sheet = this.oldWorkBook.getSheetAt(sheetIndex);
-            final String oldSheetName = sheet.getSheetName();
-            if (!sheetList.contains(oldSheetName)) {
-                sheetList.add(oldSheetName);
-            }
-        }
-
-        Collections.sort(sheetList, (o1, o2) -> o1.compareToIgnoreCase(o2));
-
-        final ObservableList<String> list = FXCollections
-                .observableArrayList(sheetList.toArray(new String[sheetList
-                        .size()]));
-        this.sheetList.setItems(list);
-
     }
 
     private void load() {
@@ -198,5 +227,39 @@ public class SheetListControler {
                 this.newWkData.put(sheetName, data);
             }
         }
+    }
+
+    public void process(final String oldFileName, final String newFileName) {
+
+        try {
+            this.oldWorkBook = XlsUtils.openFile(oldFileName);
+            this.newWorkBook = XlsUtils.openFile(newFileName);
+        } catch (final IOException e) {
+            log.error("Error while opening Workbook", e);
+            return;
+        }
+
+        final List<String> sheetList = new LinkedList<>();
+        for (int sheetIndex = 0; sheetIndex < this.newWorkBook
+                .getNumberOfSheets(); ++sheetIndex) {
+            sheetList.add(this.newWorkBook.getSheetAt(sheetIndex)
+                    .getSheetName());
+        }
+
+        for (int sheetIndex = 0; sheetIndex < this.oldWorkBook
+                .getNumberOfSheets(); ++sheetIndex) {
+            final Sheet sheet = this.oldWorkBook.getSheetAt(sheetIndex);
+            final String oldSheetName = sheet.getSheetName();
+            if (!sheetList.contains(oldSheetName)) {
+                sheetList.add(oldSheetName);
+            }
+        }
+
+        Collections.sort(sheetList, (o1, o2) -> o1.compareToIgnoreCase(o2));
+
+        final ObservableList<String> list = FXCollections
+                .observableArrayList(sheetList.toArray(new String[sheetList
+                        .size()]));
+        this.sheetList.setItems(list);
     }
 }
