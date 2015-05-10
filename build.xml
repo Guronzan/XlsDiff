@@ -1,0 +1,33 @@
+<project name="XlsDiff" default="exe" xmlns:artifact="antlib:org.apache.maven.artifact.ant">
+	<description>
+		Script de création de l'éxécutable pour utilitaire de Diff de fichiers Excel
+	</description>
+	<property environment="env" />
+
+	<!-- Launch4J task -->
+	<taskdef name="launch4j" classname="net.sf.launch4j.ant.Launch4jTask" classpath="${env.LAUNCH4J_HOME}/launch4j.jar:${env.LAUNCH4J_HOME}/lib/xstream.jar" />
+
+	<property name="xlsDiff.dir">.</property>
+	<property name="jre.home">C:\Dev\Java\jdk1.8.0_45\jre</property>
+	
+
+	<target name="dependencies">
+		<delete dir="${xlsDiff.dir}/target" />
+
+
+		<artifact:mvn pom="${xlsDiff.dir}/pom.xml" mavenHome="${env.MAVEN_HOME}" fork="true">
+			<arg value="dependency:copy-dependencies" />
+			<arg value="-DincludeScope=compile" />
+			<arg value="-DincludeScope=runtime" />
+			<arg line="package -Dmaven.test.skip=true" />
+		</artifact:mvn>
+	</target>
+
+	<target name="exe" depends="dependencies">
+		<copy todir="liv/jre">
+			<fileset dir="${jre.home}"/>
+		</copy>
+		<launch4j configFile="${xlsDiff.dir}/launch4j.xml" />
+	</target>
+
+</project>
