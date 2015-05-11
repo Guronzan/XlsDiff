@@ -13,13 +13,9 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuItem;
-import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.MapValueFactory;
-import javafx.scene.control.cell.TextFieldTableCell;
-import javafx.util.Callback;
-import javafx.util.StringConverter;
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.poi.ss.usermodel.Cell;
@@ -27,239 +23,208 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 
+import fr.viveris.xlsdiff.fxgui.CellFactory;
 import fr.viveris.xlsdiff.fxgui.MainWindow;
 import fr.viveris.xlsdiff.utils.XlsUtils;
 
 @Slf4j
 public class SheetListControler {
-    private Workbook oldWorkBook;
-    private Workbook newWorkBook;
-    private final Map<String, ObservableList<Map<String, String>>> oldWkData = new TreeMap<>();
-    private final Map<String, ObservableList<Map<String, String>>> newWkData = new TreeMap<>();
-    final Callback<TableColumn<Map<String, String>, String>, TableCell<Map<String, String>, String>> cellFactoryForMap = p -> new TextFieldTableCell<>(
-            new StringConverter<String>() {
-                @Override
-                public String toString(final String t) {
-                    if (t != null) {
-                        return t.toString();
-                    } else {
-                        return null;
-                    }
-                }
+	private Workbook oldWorkBook;
+	private Workbook newWorkBook;
+	private final Map<String, ObservableList<Map<String, String>>> oldWkData = new TreeMap<>();
+	private final Map<String, ObservableList<Map<String, String>>> newWkData = new TreeMap<>();
+	private final Map<TableColumn<Map<String, String>, String>, Integer> oldTableColumnsMap = new HashMap<>();
+	private final Map<TableColumn<Map<String, String>, String>, Integer> newTableColumnsMap = new HashMap<>();
+	private final CellFactory cellFactory = new CellFactory();
 
-                @Override
-                public String fromString(final String string) {
-                    return string;
-                }
-            });
+	private final MainWindow mainInstance = MainWindow.getInstance();
+	private static SheetListControler instance;
 
-    private final MainWindow mainInstance = MainWindow.getInstance();
+	public static SheetListControler getInstance() {
+		return instance;
+	}
 
-    @FXML
-    private ListView<String> sheetList;
+	public SheetListControler() {
+		instance = this;
+	}
 
-    @FXML
-    private TableView<Map<String, String>> oldTableView;
-    @FXML
-    private TableView<Map<String, String>> newTableView;
+	@FXML
+	private ListView<String> sheetList;
 
-    @FXML
-    private MenuItem menuChooseFiles;
-    @FXML
-    private MenuItem menuSearchDiff;
+	@FXML
+	private TableView<Map<String, String>> oldTableView;
+	@FXML
+	private TableView<Map<String, String>> newTableView;
 
-    public void initialize() {
-        assert this.sheetList != null : "fx:id=\"sheetList\" was not injected: check your FXML file 'mainFrame.fxml'.";
-        this.sheetList.setOnMouseClicked(event -> load());
-        this.menuChooseFiles.setOnAction(event -> {
-            this.mainInstance.getPrimaryStage().hide();
-            this.mainInstance.getFileSelectionStage().showAndWait();
-        });
+	@FXML
+	private MenuItem menuChooseFiles;
+	@FXML
+	private MenuItem menuSearchDiff;
 
-        this.menuSearchDiff.setOnAction(event -> {
-            performDiffs();
-        });
+	public void initialize() {
+		assert this.sheetList != null : "fx:id=\"sheetList\" was not injected: check your FXML file 'mainFrame.fxml'.";
+		this.sheetList.setOnMouseClicked(event -> load());
+		this.menuChooseFiles.setOnAction(event -> {
+			this.mainInstance.getPrimaryStage().hide();
+			this.mainInstance.getFileSelectionStage().showAndWait();
+		});
 
-        // final ObservableList<Integer> highlightRows = FXCollections
-        // .observableArrayList();
-        //
-        // this.oldTableView
-        // .setRowFactory(tableView -> {
-        // final TableRow<Map<String, String>> row = new TableRow<Map<String,
-        // String>>() {
-        // @Override
-        // protected void updateItem(
-        // final Map<String, String> map,
-        // final boolean empty) {
-        // super.updateItem(map, empty);
-        // if (highlightRows.contains(getIndex())) {
-        // if (!getStyleClass().contains("highlightedRow")) {
-        // getStyleClass().add("highlightedRow");
-        // }
-        // } else {
-        // getStyleClass()
-        // .removeAll(
-        // Collections
-        // .singleton("highlightedRow"));
-        // }
-        // }
-        // };
-        // highlightRows
-        // .addListener((ListChangeListener<Integer>) change -> {
-        // if (highlightRows.contains(row.getIndex())) {
-        // if (!row.getStyleClass().contains(
-        // "highlightedRow")) {
-        // row.getStyleClass().add(
-        // "highlightedRow");
-        // }
-        // } else {
-        // row.getStyleClass()
-        // .removeAll(
-        // Collections
-        // .singleton("highlightedRow"));
-        // }
-        // });
-        // return row;
-        // });
-    }
+		this.menuSearchDiff.setOnAction(event -> {
+			performDiffs();
+		});
+	}
 
-    private void performDiffs() {
-        final ObservableList<Map<String, String>> oldItems = this.oldTableView
-                .getItems();
-        final ObservableList<Map<String, String>> newitems = this.newTableView
-                .getItems();
+	private void performDiffs() {
+		final ObservableList<Map<String, String>> oldItems = this.oldTableView
+				.getItems();
+		final ObservableList<Map<String, String>> newitems = this.newTableView
+				.getItems();
 
-        for (int i = 0; i < oldItems.size(); ++i) {
-            final Map<String, String> oldMap = oldItems.get(i);
-            final Map<String, String> newMap = newitems.get(i);
+		for (int i = 0; i < oldItems.size(); ++i) {
+			final Map<String, String> oldMap = oldItems.get(i);
+			final Map<String, String> newMap = newitems.get(i);
 
-        }
-    }
+		}
+	}
 
-    private void load() {
-        final String sheetName = this.sheetList.getSelectionModel()
-                .getSelectedItem();
-        if (sheetName == null) {
-            return;
-        }
-        this.oldTableView.getColumns().clear();
-        this.newTableView.getColumns().clear();
+	private void load() {
+		final String sheetName = this.sheetList.getSelectionModel()
+				.getSelectedItem();
+		if (sheetName == null) {
+			return;
+		}
+		this.oldTableView.getColumns().clear();
+		this.newTableView.getColumns().clear();
+		this.newTableColumnsMap.clear();
+		this.oldTableColumnsMap.clear();
 
-        final Sheet oldSheet = this.oldWorkBook.getSheet(sheetName);
-        final Sheet newSheet = this.newWorkBook.getSheet(sheetName);
+		final Sheet oldSheet = this.oldWorkBook.getSheet(sheetName);
+		final Sheet newSheet = this.newWorkBook.getSheet(sheetName);
 
-        if (oldSheet != null) {
-            final Map<Integer, String> columnMapKeys = new TreeMap<>();
+		if (oldSheet != null) {
+			final Map<Integer, String> columnMapKeys = new TreeMap<>();
 
-            final Row firstRow = oldSheet.getRow(0);
-            for (final Cell cell : firstRow) {
+			final Row firstRow = oldSheet.getRow(0);
+			for (final Cell cell : firstRow) {
 
-                final String cellValue = XlsUtils.getStringCellValue(cell);
-                final TableColumn<Map<String, String>, String> tableColumn = new TableColumn<>(
-                        cellValue);
-                tableColumn.setCellValueFactory(new MapValueFactory(cellValue));
-                tableColumn.setCellFactory(this.cellFactoryForMap);
-                this.oldTableView.getColumns().add(tableColumn);
-                columnMapKeys.put(cell.getColumnIndex(), cellValue);
-            }
+				final String cellValue = XlsUtils.getStringCellValue(cell);
+				final TableColumn<Map<String, String>, String> tableColumn = new TableColumn<>(
+						cellValue);
+				tableColumn.setCellValueFactory(new MapValueFactory(cellValue));
+				tableColumn.setCellFactory(this.cellFactory);
+				this.oldTableView.getColumns().add(tableColumn);
+				columnMapKeys.put(cell.getColumnIndex(), cellValue);
+				this.oldTableColumnsMap.put(tableColumn, cell.getColumnIndex());
+			}
 
-            if (this.oldWkData.containsKey(oldSheet.getSheetName())) {
-                this.oldTableView.setItems(this.oldWkData.get(oldSheet
-                        .getSheetName()));
-            } else {
+			if (this.oldWkData.containsKey(oldSheet.getSheetName())) {
+				this.oldTableView.setItems(this.oldWkData.get(oldSheet
+						.getSheetName()));
+			} else {
 
-                final ObservableList<Map<String, String>> data = FXCollections
-                        .observableArrayList();
-                for (final Row sheetRow : oldSheet) {
-                    if (sheetRow.getRowNum() == 0) {
-                        // Skip header
-                        continue;
-                    }
-                    final Map<String, String> dataRow = new HashMap<>();
-                    for (int i = 0; i < sheetRow.getLastCellNum(); ++i) {
+				final ObservableList<Map<String, String>> data = FXCollections
+						.observableArrayList();
+				for (final Row sheetRow : oldSheet) {
+					if (sheetRow.getRowNum() == 0) {
+						// Skip header
+						continue;
+					}
 
-                        final Cell cell = sheetRow.getCell(i);
-                        dataRow.put(columnMapKeys.get(i),
-                                XlsUtils.getStringCellValue(cell));
-                    }
-                    data.add(dataRow);
-                }
-                this.oldTableView.setItems(data);
-                this.oldWkData.put(sheetName, data);
-            }
-        }
+					final Map<String, String> dataRow = new HashMap<>();
+					for (int i = 0; i < sheetRow.getLastCellNum(); ++i) {
 
-        if (newSheet != null) {
-            final Map<Integer, String> columnMapKeys = new TreeMap<>();
-            final Row firstRow = newSheet.getRow(0);
+						final Cell cell = sheetRow.getCell(i);
+						dataRow.put(columnMapKeys.get(i),
+								XlsUtils.getStringCellValue(cell));
+					}
+					data.add(dataRow);
+				}
 
-            for (final Cell cell : firstRow) {
+				this.oldTableView.setItems(data);
+				this.oldWkData.put(sheetName, data);
+			}
+		}
 
-                final String cellValue = XlsUtils.getStringCellValue(cell);
-                final TableColumn<Map<String, String>, String> tableColumn = new TableColumn<>(
-                        cellValue);
-                tableColumn.setCellValueFactory(new MapValueFactory(cellValue));
-                tableColumn.setCellFactory(this.cellFactoryForMap);
-                this.newTableView.getColumns().add(tableColumn);
-                columnMapKeys.put(cell.getColumnIndex(), cellValue);
-            }
+		if (newSheet != null) {
+			final Map<Integer, String> columnMapKeys = new TreeMap<>();
+			final Row firstRow = newSheet.getRow(0);
 
-            if (this.newWkData.containsKey(newSheet.getSheetName())) {
-                this.newTableView.setItems(this.newWkData.get(newSheet
-                        .getSheetName()));
-            } else {
-                final ObservableList<Map<String, String>> data = FXCollections
-                        .observableArrayList();
-                for (final Row sheetRow : newSheet) {
-                    if (sheetRow.getRowNum() == 0) {
-                        // Skip header
-                        continue;
-                    }
-                    final Map<String, String> dataRow = new HashMap<>();
-                    for (int i = 0; i < sheetRow.getLastCellNum(); ++i) {
-                        final Cell cell = sheetRow.getCell(i);
-                        dataRow.put(columnMapKeys.get(i),
-                                XlsUtils.getStringCellValue(cell));
-                    }
-                    data.add(dataRow);
-                }
-                this.newTableView.setItems(data);
-                this.newWkData.put(sheetName, data);
-            }
-        }
-    }
+			for (final Cell cell : firstRow) {
 
-    public void process(final String oldFileName, final String newFileName) {
+				final String cellValue = XlsUtils.getStringCellValue(cell);
+				final TableColumn<Map<String, String>, String> tableColumn = new TableColumn<>(
+						cellValue);
+				tableColumn.setCellValueFactory(new MapValueFactory(cellValue));
+				tableColumn.setCellFactory(this.cellFactory);
+				this.newTableView.getColumns().add(tableColumn);
+				columnMapKeys.put(cell.getColumnIndex(), cellValue);
+				this.newTableColumnsMap.put(tableColumn, cell.getColumnIndex());
+			}
 
-        try {
-            this.oldWorkBook = XlsUtils.openFile(oldFileName);
-            this.newWorkBook = XlsUtils.openFile(newFileName);
-        } catch (final IOException e) {
-            log.error("Error while opening Workbook", e);
-            return;
-        }
+			if (this.newWkData.containsKey(newSheet.getSheetName())) {
+				this.newTableView.setItems(this.newWkData.get(newSheet
+						.getSheetName()));
+			} else {
+				final ObservableList<Map<String, String>> data = FXCollections
+						.observableArrayList();
+				for (final Row sheetRow : newSheet) {
+					if (sheetRow.getRowNum() == 0) {
+						// Skip header
+						continue;
+					}
+					final Map<String, String> dataRow = new HashMap<>();
+					for (int i = 0; i < sheetRow.getLastCellNum(); ++i) {
+						final Cell cell = sheetRow.getCell(i);
+						dataRow.put(columnMapKeys.get(i),
+								XlsUtils.getStringCellValue(cell));
+					}
+					data.add(dataRow);
+				}
+				this.newTableView.setItems(data);
+				this.newWkData.put(sheetName, data);
+			}
+		}
+	}
 
-        final List<String> sheetList = new LinkedList<>();
-        for (int sheetIndex = 0; sheetIndex < this.newWorkBook
-                .getNumberOfSheets(); ++sheetIndex) {
-            sheetList.add(this.newWorkBook.getSheetAt(sheetIndex)
-                    .getSheetName());
-        }
+	public void process(final String oldFileName, final String newFileName) {
 
-        for (int sheetIndex = 0; sheetIndex < this.oldWorkBook
-                .getNumberOfSheets(); ++sheetIndex) {
-            final Sheet sheet = this.oldWorkBook.getSheetAt(sheetIndex);
-            final String oldSheetName = sheet.getSheetName();
-            if (!sheetList.contains(oldSheetName)) {
-                sheetList.add(oldSheetName);
-            }
-        }
+		try {
+			this.oldWorkBook = XlsUtils.openFile(oldFileName);
+			this.newWorkBook = XlsUtils.openFile(newFileName);
+		} catch (final IOException e) {
+			log.error("Error while opening Workbook", e);
+			return;
+		}
 
-        Collections.sort(sheetList, (o1, o2) -> o1.compareToIgnoreCase(o2));
+		final List<String> sheetList = new LinkedList<>();
+		for (int sheetIndex = 0; sheetIndex < this.newWorkBook
+				.getNumberOfSheets(); ++sheetIndex) {
+			sheetList.add(this.newWorkBook.getSheetAt(sheetIndex)
+					.getSheetName());
+		}
 
-        final ObservableList<String> list = FXCollections
-                .observableArrayList(sheetList.toArray(new String[sheetList
-                        .size()]));
-        this.sheetList.setItems(list);
-    }
+		for (int sheetIndex = 0; sheetIndex < this.oldWorkBook
+				.getNumberOfSheets(); ++sheetIndex) {
+			final Sheet sheet = this.oldWorkBook.getSheetAt(sheetIndex);
+			final String oldSheetName = sheet.getSheetName();
+			if (!sheetList.contains(oldSheetName)) {
+				sheetList.add(oldSheetName);
+			}
+		}
+
+		Collections.sort(sheetList, (o1, o2) -> o1.compareToIgnoreCase(o2));
+
+		final ObservableList<String> list = FXCollections
+				.observableArrayList(sheetList.toArray(new String[sheetList
+						.size()]));
+		this.sheetList.setItems(list);
+	}
+
+	public Map<TableColumn<Map<String, String>, String>, Integer> getOldTableColumnsMap() {
+		return this.oldTableColumnsMap;
+	}
+
+	public Map<TableColumn<Map<String, String>, String>, Integer> getNewTableColumnsMap() {
+		return this.newTableColumnsMap;
+	}
 }

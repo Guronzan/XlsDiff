@@ -1,0 +1,2 @@
+mvn clean
+rmdir liv
